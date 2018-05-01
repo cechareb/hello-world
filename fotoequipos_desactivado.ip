@@ -1,0 +1,164 @@
+-- creación: alinares set 2015
+-- modificación: cperezb 15/10/2015 - se toma el motivodesactivacion del historicocontrato para el campo motivomovimiento, y se borra los cruces a las tablas de movimiento
+
+
+SET heading off 
+SET linesize 10000
+SET pagesize 0 
+SET newpage none 
+SET feedback off 
+SET termout off 
+SET recsep off 
+SET sqlprompt "" 
+SET TRIMSPOOL ON 
+SET echo off
+
+spool 'V:\RA_Inteligencia_de_Procesos\20 FotoEquipos\detalle_fotoequipos_desactivado.txt';
+--DESACTIVADOS
+SELECT REPLACE(REPLACE(REPLACE(nvl(c.compania,t.nombrecuentaresponsable),'|',''),chr(13),''),chr(10),'') ||'|'||
+       DECODE (
+           e.codigodivision,
+           1, CASE
+                  WHEN LENGTH (trim(e.telefono)) = 10 THEN SUBSTR (trim(e.telefono), LENGTH (trim(e.telefono)) - 7)
+                  WHEN LENGTH (trim(e.telefono)) = 11 THEN SUBSTR (trim(e.telefono), LENGTH (trim(e.telefono)) - 8)
+                  WHEN LENGTH (trim(e.telefono)) = 12 THEN SUBSTR (trim(e.telefono), LENGTH (trim(e.telefono)) - 8)
+				  ELSE SUBSTR (trim(e.telefono), LENGTH (trim(e.telefono)) - 8)
+              END,
+           e.telefono) ||'|'||
+       e.estadocontrato ||'|'||
+       TO_CHAR(e.fechadesactivacioncontrato,'DD/MM/YYYY') ||'|'||
+       TO_CHAR(e.fechaactivacioncontrato,'DD/MM/YYYY') ||'|'||
+       t.ciclofacturacion ||'|'||
+       p.plantarifario ||'|'||
+       p.codigoplantarifariobscs ||'|'||
+       t.numerocuentaresponsable ||'|'||
+       e.codigocontratobscs ||'|'||
+       c.tipopersona ||'|'||
+       c.codigocompania ||'|'||
+       r.producto ||'|'||
+       e.codigocuentaresponsable ||'|'||
+       c.tipocuenta ||'|'||
+       TO_CHAR(e.fechacargacontrato,'DD/MM/YYYY') ||'|'||
+       c.ruccompania ||'|'||
+       c.distrito ||'|'||
+       f.identificadorconsultor ||'|'||
+       f.identificadordealer ||'|'||
+       f.canalventa ||'|'||
+       e.imei ||'|'||
+       e.sim ||'|'||
+       c.girocompania ||'|'||
+       c.scorecrediticio ||'|'||
+       c.region ||'|'||
+       c.supervisado ||'|'||
+       t.estadocobranzacuenta ||'|'||
+       e.directory_number ||'|'||
+       NVL (ROUND (e.accessfee, 4), -1) ||'|'||
+       c.segmento ||'|'||
+       f.zona ||'|'||
+       p.tipoplan ||'|'||
+       y.canalventa ||'|'||
+       y.identificadorconsultor ||'|'||
+       y.identificadordealer ||'|'||
+       c.codigocuentacompania ||'|'||
+       c.riesgofinanciero ||'|'||
+       nvl(motivo.motivomovimiento,e.motivodesactivacion) ||'|'||
+       motivo.tipomotivomovimiento ||'|'||
+	   TO_CHAR(TRUNC (c.fechacreacioncompania),'DD/MM/YYYY') ||'|'||
+       TO_CHAR(TRUNC (c.fechaingresocliente),'DD/MM/YYYY') ||'|'||
+       e.solucion ||'|'||
+       h.rangocuenta ||'|'||
+	   TO_CHAR(sysdate, 'DD/MM/YYYY') ||'|'||
+	   TO_CHAR(sysdate-1,'YYYYMM') ||'|'||
+	   c.departamento ||'|'||
+	   TO_CHAR(motivo.fecha,'DD/MM/YYYY')
+  FROM dmartsys.compania c,
+       dmartsys.plantarifario p,
+       dmartsys.cuentaresponsable t,
+       dmartsys.producto r,
+       dmartsys.alt_compania h,
+       dmartsys.fuerzaventa f,
+       (SELECT codigocontrato,
+               fechacargacontrato,
+               telefono,
+               fechadesactivacioncontrato,
+               fechaactivacioncontrato,
+               plantarifariocontrato,
+               registroactual,
+               estadocontrato,
+               codigocuentaresponsable,
+               codigocontratobscs,
+               imei,
+               sim,
+               codigomodeloequipo,
+               codigocompania,
+               codigodivision,
+               directory_number,
+               accessfee,
+			   solucion,
+			   ciclofacturacioncontrato,
+			   motivodesactivacion
+          FROM (SELECT a.codigocontrato,
+                       a.fechacargacontrato,
+                       a.telefono,
+                       a.fechadesactivacioncontrato,
+                       a.fechaactivacioncontrato,
+                       a.codigomodeloequipo,
+                       a.registroactual,
+                       a.estadocontrato,
+                       a.codigocuentaresponsable,
+                       a.codigocontratobscs,
+                       a.imei,
+                       a.sim,
+                       a.plantarifariocontrato,
+                       a.codigocompania,
+                       a.codigodivision,
+                       a.directory_number,
+                       a.accessfee,
+					   a.solucion,
+					   a.ciclofacturacioncontrato,
+					   a.motivodesactivacion,
+                       ROW_NUMBER ()
+                       OVER (PARTITION BY a.codigocontratobscs
+                                 ORDER BY a.fechacargacontrato DESC,
+                                          a.codigocontrato DESC) AS num
+                  FROM dmartsys.historicocontrato a
+                 WHERE a.fechacargacontrato >= TRUNC(SYSDATE-1,'MM') )
+         WHERE num = 1 AND estadocontrato = 'Desactivado'
+		 ) e,
+       (    SELECT codigocontratofuente
+				 , codigoconsultor
+				 , codigoconsultorcomision
+				 , canalventa
+				 , identificadorconsultor
+				 , identificadordealer
+			  FROM
+				(SELECT a.fechacarga,
+					 a.codigocontratofuente,
+					 b.codigoconsultor ,
+					 a.codigoconsultorcomision,
+					 b.canalventa,
+					 b.identificadorconsultor,
+					 b.identificadordealer,
+					 row_number() OVER (PARTITION BY a.codigocontratofuente ORDER BY a.fechacarga DESC) rn    
+				FROM dmartsys.unidades a, dmartsys.fuerzaventa b
+				WHERE     b.codigoconsultor = a.codigoconsultorcomision
+					 AND (a.unidadesadicionales = '1' OR a.unidadesnuevas = '1')
+				) WHERE RN=1 ) y,
+		(SELECT codigocontrato, motivomovimiento, tipomotivomovimiento, fecha
+          FROM (  SELECT a.codigocontrato, a.fecha,
+						 b.motivomovimiento, b.tipomotivomovimiento,
+                         ROW_NUMBER () OVER (PARTITION BY codigocontrato ORDER BY secuenciamovimiento DESC) rn
+                    FROM dmartsys.movimientosunidades a
+                    LEFT JOIN dmartsys.motivomovimiento b
+                    ON a.codigomotivomovimiento = b.codigomotivomovimiento)
+        WHERE RN = 1) motivo  
+ WHERE     e.plantarifariocontrato = p.codigoplantarifario (+)
+       AND e.codigocuentaresponsable = t.codigocuentaresponsable (+)
+       AND e.codigocompania = h.codigocompania (+)
+       AND e.codigocompania = c.codigocompania (+)
+       AND e.codigomodeloequipo = r.codigoproducto(+)
+       AND c.clienteganadopor = f.codigoconsultor(+)
+       AND e.codigocontratobscs = y.codigocontratofuente(+)
+	   AND e.codigocontrato = motivo.codigocontrato(+);
+spool off
+exit;

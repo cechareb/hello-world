@@ -1,0 +1,80 @@
+SET heading off 
+SET linesize 10000
+--SET espacio 0
+SET pagesize 0 
+--SET COLSEP " "
+SET newpage none 
+SET feedback off 
+SET termout off 
+SET recsep off 
+SET sqlprompt "" 
+SET TRIMSPOOL ON 
+SET echo off
+
+, , , , , reclamoscobranzaabierto, occxreclamonoaplicada, acuerdopago, 
+
+spool 'V:\RA_Inteligencia_de_Procesos\19 FotoCompanias\detalle_companias.txt';
+SELECT REPLACE(compania.codigocompania,'|','') ||'|'||
+       REPLACE(REPLACE(REPLACE(compania.compania,'|',''),chr(13),''),chr(10),'') ||'|'||
+       REPLACE(compania.codigocuentacompania,'|','') ||'|'||
+       REPLACE(compania.unidadescompania,'|','') ||'|'||
+       REPLACE(compania.nroequiposactivospostpago,'|','') ||'|'||
+       REPLACE(compania.nroequiposactivosprepago,'|','') ||'|'||
+       REPLACE(compania.unidadesdesactivadas31dias,'|','') ||'|'||
+       REPLACE(compania.unidadessuspendidascompania,'|','') ||'|'||
+       REPLACE(compania.region,'|','') ||'|'||
+       REPLACE(compania.departamento,'|','') ||'|'||
+       REPLACE(compania.provincia,'|','') ||'|'||
+       REPLACE(compania.distrito,'|','') ||'|'||
+       REPLACE(compania.girocompania,'|','') ||'|'||
+       REPLACE(compania.subgirocompania,'|','') ||'|'||
+       REPLACE(compania.ubigeo,'|','') ||'|'||
+       TO_CHAR(compania.fechacreacioncompania,'DD/MM/YYYY') ||'|'||
+       TO_CHAR(compania.fechaingresocliente,'DD/MM/YYYY') ||'|'||
+       compania.empleados ||'|'||
+       compania.empleadoscompania ||'|'||
+       compania.segmento ||'|'||
+       compania.empleadosinternos ||'|'||
+       REPLACE(fuerzaventa.identificadorconsultor,'|','') ||'|'||
+       REPLACE(fuerzaventa.identificadordealer,'|','') ||'|'||
+       REPLACE(fuerzaventa.canalventa,'|','') ||'|'||
+       REPLACE(compania.scorecrediticio,'|','') ||'|'||
+       REPLACE(compania.ruccompania,'|','') ||'|'||
+       REPLACE(compania.tipocuenta,'|','') ||'|'||
+       REPLACE(compania.ciclofacturacion,'|','') ||'|'||
+       REPLACE(compania.estadocobranza,'|','') ||'|'||
+       REPLACE(compania.riesgofinanciero,'|','') ||'|'||
+       REPLACE(compania.tipopersona,'|','') ||'|'||
+       compania.deudacastigada ||'|'||
+       REPLACE(compania.telefonocompania,'|','') ||'|'||
+       REPLACE(REPLACE(REPLACE(compania.direccion,'|',''),chr(13),''),chr(10),'') ||'|'||
+       REPLACE(REPLACE(REPLACE(compania.emailcompania,'|',''),chr(13),''),chr(10),'') ||'|'||
+       REPLACE(compania.creadopor,'|','') ||'|'||
+       REPLACE(z.identificadorconsultor,'|','') ||'|'||
+       REPLACE(compania.tipocompania,'|','') ||'|'||
+       CASE
+           WHEN LENGTH (compania.ruccompania) <> 11
+           THEN 'DNI'
+           WHEN LENGTH (compania.ruccompania) = 11
+                AND (   compania.ruccompania LIKE '10%'
+                     OR compania.ruccompania LIKE '20%'
+                     OR compania.ruccompania LIKE '15%'
+                     OR compania.ruccompania LIKE '17%')
+           THEN 'RUC' END || '|' || 
+		REPLACE(compania.occxreclamonoaplicada,'|','') || '|' ||
+		REPLACE(compania.reclamoscobranzaabierto,'|','') ||'|'||
+		REPLACE(compania.acuerdopago,'|','')
+  FROM dmartsys.compania compania
+       LEFT JOIN dmartsys.fuerzaventa fuerzaventa
+           ON compania.clienteganadopor = fuerzaventa.codigoconsultor
+       LEFT JOIN (SELECT codigoconsultor, identificadorconsultor
+                    FROM dmartsys.fuerzaventa b
+                   WHERE b.codigoconsultor =
+                             (SELECT MAX (codigoconsultor)
+                                FROM dmartsys.fuerzaventa x
+                               WHERE x.codigovantiveconsultor = b.codigovantiveconsultor)) z
+           ON compania.clienteganadopor = z.codigoconsultor;
+spool off
+exit;
+
+
